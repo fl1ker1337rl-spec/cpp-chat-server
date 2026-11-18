@@ -8,9 +8,9 @@
 ChatServer::ChatServer(QObject *parent) : QTcpServer(parent){
     qint16 port = 12345;
     if(listen(QHostAddress::Any, port)){
-        qDebug() << "Сервер принимает подключения";
+        qDebug() << "Server is listening for connections";
     } else {
-        qDebug() << "Ошибка сервера!";
+        qDebug() << "Server error!";
     }
 }
 
@@ -22,9 +22,9 @@ void ChatServer::incomingConnection(qintptr socketDescriptor){
     QTcpSocket *clientsocket = new QTcpSocket(this);
 
     if (clientsocket->setSocketDescriptor(socketDescriptor)) {
-        qDebug() << "Новое TCP-соединение установлено!";
+        qDebug() << "New TCP connection established!";
 
-        // Чтение входящих данных от клиента
+        // Reading incoming data from the client
         connect(clientsocket, &QTcpSocket::readyRead, this, [this, clientsocket](){
             QByteArray data = clientsocket->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
@@ -37,41 +37,41 @@ void ChatServer::incomingConnection(qintptr socketDescriptor){
                     QString username = jsonObj["username"].toString();
                     QString clientId = jsonObj["senderID"].toString();
 
-                    // Ключом делаем ID, а в структуре сохраняем имя и сокет
+                    // Using ID as key, and storing name and socket in the structure
                     clients_[clientId] = ClientInfo{ username, clientsocket };
 
-                    qDebug() << "Пользователь вошел в чат! Личный ID:" << clientId << "| Имя:" << username;
+                    qDebug() << "User logged into chat! Personal ID:" << clientId << "| Name:" << username;
                     broadcastUserList();
                 }
-                // Обработка обычного сообщения (тип "message")
+                // Processing regular message (type "message")
                 else if (type == "private_message") {
                     QString senderId = jsonObj["senderID"].toString();
                     QString recipientId = jsonObj["recipientID"].toString();
                     QString content = jsonObj["content"].toString();
 
-                    // Достаем имя отправителя из мапы
-                    QString senderName = clients_.contains(senderId) ? clients_[senderId].name : "Неизвестный";
+                    // Retrieving sender name from the map
+                    QString senderName = clients_.contains(senderId) ? clients_[senderId].name : "Unknown";
 
-                    // Внедряем имя в JSON, чтобы получатель знал кто написал
+                    // Injecting name into JSON so the recipient knows who wrote it
                     jsonObj["senderName"] = senderName;
                     jsonObj["senderID"] = senderId;
                     QJsonDocument modifiedDoc(jsonObj);
                     QByteArray modifiedData = modifiedDoc.toJson(QJsonDocument::Compact);
 
-                    // Пересылаем пакет получателю
+                    // Forwarding the packet to the recipient
                     if (clients_.contains(recipientId)) {
                         clients_[recipientId].socket->write(modifiedData);
-                        qDebug() << "Переслано от" << senderName << "для ID:" << recipientId;
+                        qDebug() << "Forwarded from" << senderName << "to ID:" << recipientId;
                     } else {
-                        qDebug() << "Ошибка: Получатель не найден!";
+                        qDebug() << "Error: Recipient not found!";
                     }
                 }
             }
         });
 
-        // Обработка отключения клиента
+        // Handling client disconnection
         connect(clientsocket, &QTcpSocket::disconnected, this, [this, clientsocket](){
-            // Ищем ключ (ID/имя) в QMap по значению сокета в структуре ClientInfo
+            // Searching for key (ID/name) in QMap by socket value in ClientInfo structure
             QString disconnectedId;
             for (auto it = clients_.begin(); it != clients_.end(); ++it) {
                 if (it.value().socket == clientsocket) {
@@ -82,7 +82,7 @@ void ChatServer::incomingConnection(qintptr socketDescriptor){
 
             if (!disconnectedId.isEmpty()) {
                 clients_.remove(disconnectedId);
-                qDebug() << "Клиент с ID" << disconnectedId << "отключился. Осталось клиентов:" << clients_.size();
+                qDebug() << "Client with ID" << disconnectedId << "disconnected. Clients remaining:" << clients_.size();
             }
             clientsocket->deleteLater();
         });
@@ -91,7 +91,7 @@ void ChatServer::incomingConnection(qintptr socketDescriptor){
         delete clientsocket;
     }
 }
-// Вывод всех пользователей
+// Broadcasting user list to all
 void ChatServer::broadcastUserList(){
     QJsonArray UsersArray;
 
@@ -109,25 +109,9 @@ void ChatServer::broadcastUserList(){
     QJsonDocument doc(rootObj);
     QByteArray data = doc.toJson(QJsonDocument::Compact);
 
-    qDebug() << "Все клиенты: " << UsersArray;
+    qDebug() << "All clients: " << UsersArray;
 
     for(auto it = clients_.constBegin(); it != clients_.constEnd(); ++it){
         it.value().socket->write(data);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
