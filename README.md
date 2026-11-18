@@ -20,6 +20,21 @@ A robust, lightweight, and asynchronous multiclient TCP server built with **C++1
 
 ---
 
+## 🛠️ Getting Started & Quick Start
+
+### 1. Build and Run the Server
+Clone and launch the companion server repository (`cpp-chat-server`):
+```bash
+git clone https://github.com/fl1ker1337rl-spec/cpp-chat-server.git
+cd cpp-chat-server
+mkdir build && cd build
+cmake ..
+cmake --build .
+# Run the server executable
+./cpp-chat-server
+```
+Note: To test the full messaging experience, make sure to also clone and run the companion client repository: [qt-chat-client](https://github.com/fl1ker1337rl-spec/qt-chat-client)
+
 ## 📋 Server Console Logs & Output
 
 Here is a sample console output demonstrating the server lifecycle, client registrations, and message forwarding:
